@@ -11,9 +11,9 @@ const app = express();
 app.use(cors({ origin: config.corsOrigins === '*' ? true : config.corsOrigins.split(',') }));
 app.use(express.json());
 
-// Routes — mounted at / because Ingress rewrites /api/audit/* → /*
-app.use('/', auditRoutes);
+// Routes — /health must be registered BEFORE / wildcard
 app.use('/health', healthRoutes);
+app.use('/', auditRoutes);
 
 async function bootstrap() {
   try {

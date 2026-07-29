@@ -77,9 +77,14 @@ router.get('/stream', sseHandler);
 // GET /api/audit/:id — single event detail
 router.get('/:id', async (req: Request, res: Response) => {
   try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      res.status(400).json({ error: 'Invalid ID format' });
+      return;
+    }
     const result = await pool.query(
       'SELECT * FROM audit_events WHERE id = $1',
-      [req.params.id],
+      [id],
     );
     if (result.rows.length === 0) {
       res.status(404).json({ error: 'Event not found' });
