@@ -131,7 +131,29 @@ export class ReservationsService {
     if (reservation.status === 'expired') throw new BadRequestException('La reserva expiró. Crea una nueva.');
     if (reservation.status === 'confirmed') throw new BadRequestException('La reserva ya está pagada.');
 
-    this.payments.charge(Number(reservation.deposit), card);
+    const paymentResult = this.payments.charge(Number(reservation.deposit), card);
+
+    // Audit: Payment CREATE (5ta entidad requerida)
+    try {
+      await this.rabbitmq.publishAuditEvent({
+        entity: 'Payment',
+        action: 'CREATE',
+        userId,
+        userEmail: reservation.customerEmail,
+        timestamp: new Date().toISOString(),
+        data: {
+          after: {
+            paymentId: paymentResult.paymentId,
+            amount: Number(reservation.deposit),
+            reservationId: reservation.id,
+            invoiceNumber: reservation.invoiceNumber,
+            status: paymentResult.status,
+          },
+        },
+      });
+    } catch (err) {
+      this.logger.warn('Failed to publish Payment audit event', err);
+    }
 
     const emailSent = await this.email.sendInvoice({
       invoiceNumber: reservation.invoiceNumber,

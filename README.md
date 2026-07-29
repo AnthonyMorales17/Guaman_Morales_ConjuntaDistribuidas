@@ -153,7 +153,8 @@ Para verificar el flujo completo de eventos en tiempo real:
 1. Abre el **Dashboard** en [http://conjunta3p.espe.edu.ec/dashboard](http://conjunta3p.espe.edu.ec/dashboard). Verás el indicador verde `🟢 Conectado`.
 2. Realiza operaciones de escritura sobre las 5 entidades en la API del Backend ([http://conjunta3p.espe.edu.ec/api/docs](http://conjunta3p.espe.edu.ec/api/docs)):
    - **User:** Registra un nuevo usuario (`POST /api/auth/register`).
-   - **Reservation:** Crea o paga una reserva (`POST /api/reservations`).
+   - **Reservation:** Crea una reserva (`POST /api/reservations`).
+   - **Payment:** Paga una reserva (`POST /api/reservations/:id/pay`) — audita el cobro simulado como `Payment` CREATE.
    - **Review:** Publica o actualiza una reseña de vino (`POST /api/reviews`).
    - **Wine:** Crea, edita o elimina un vino (`POST/PUT/DELETE /api/wines`).
    - **Establishment:** Crea, edita o elimina una tienda (`POST/PUT/DELETE /api/establishments`).

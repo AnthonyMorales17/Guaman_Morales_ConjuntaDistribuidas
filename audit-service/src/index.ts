@@ -11,8 +11,8 @@ const app = express();
 app.use(cors({ origin: config.corsOrigins === '*' ? true : config.corsOrigins.split(',') }));
 app.use(express.json());
 
-// Routes
-app.use('/api/audit', auditRoutes);
+// Routes — mounted at / because Ingress rewrites /api/audit/* → /*
+app.use('/', auditRoutes);
 app.use('/health', healthRoutes);
 
 async function bootstrap() {

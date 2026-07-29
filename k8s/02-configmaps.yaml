@@ -18,3 +18,5 @@ data:
   AUDIT_PORT: "3002"
   CORS_ORIGINS: "*"
   JWT_EXPIRES_IN: "1d"
+  MAIL_USER: "cavalocal@gmail.com"
+  GOOGLE_CLIENT_ID: "placeholder-google-client-id"

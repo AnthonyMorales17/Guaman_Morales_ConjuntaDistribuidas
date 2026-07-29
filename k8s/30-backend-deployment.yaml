@@ -69,6 +69,16 @@ spec:
                 secretKeyRef:
                   name: guamanmorales-secrets
                   key: MAIL_APP_PASSWORD
+            - name: MAIL_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: guamanmorales-config
+                  key: MAIL_USER
+            - name: GOOGLE_CLIENT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: guamanmorales-config
+                  key: GOOGLE_CLIENT_ID
           readinessProbe:
             httpGet:
               path: /health
