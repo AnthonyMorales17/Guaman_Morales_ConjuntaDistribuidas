@@ -1,12 +1,18 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { RabbitMQService } from '../rabbitmq/rabbitmq.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 
 const round1 = (n: number | null) => (n != null ? Math.round(n * 10) / 10 : null);
 
 @Injectable()
 export class ReviewsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ReviewsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly rabbitmq: RabbitMQService,
+  ) {}
 
   async createOrUpdate(userId: string, dto: CreateReviewDto) {
     const existing = await this.prisma.review.findFirst({
@@ -18,6 +24,22 @@ export class ReviewsService {
       : await this.prisma.review.create({
           data: { userId, targetType: 'WINE', wineId: dto.wineId, ...data },
         });
+
+    try {
+      await this.rabbitmq.publishAuditEvent({
+        entity: 'Review',
+        action: existing ? 'UPDATE' : 'CREATE',
+        userId,
+        userEmail: '',
+        timestamp: new Date().toISOString(),
+        data: existing
+          ? { before: { rating: existing.rating, comment: existing.comment }, after: { rating: review.rating, comment: review.comment } }
+          : { after: { id: review.id, rating: review.rating, comment: review.comment, wineId: dto.wineId } },
+      });
+    } catch (err) {
+      this.logger.warn('Failed to publish audit event for createOrUpdate review', err);
+    }
+
     const agg = await this.prisma.review.aggregate({
       where: { wineId: dto.wineId, targetType: 'WINE' },
       _avg: { rating: true },

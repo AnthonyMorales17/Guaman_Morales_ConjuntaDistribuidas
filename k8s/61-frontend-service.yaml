@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: guamanmorales-frontend-service
+  namespace: guamanmorales
+spec:
+  selector:
+    app: guamanmorales-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+  type: ClusterIP

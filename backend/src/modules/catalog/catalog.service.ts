@@ -1,13 +1,23 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { RabbitMQService } from '../rabbitmq/rabbitmq.service';
 import { ListWinesQueryDto } from './dto/list-wines-query.dto';
+import { CreateWineDto } from './dto/create-wine.dto';
+import { UpdateWineDto } from './dto/update-wine.dto';
+import { CreateEstablishmentDto } from './dto/create-establishment.dto';
+import { UpdateEstablishmentDto } from './dto/update-establishment.dto';
 
 type AggRow = { wineId: string | null; _avg: { rating: number | null }; _count: { _all: number } };
 
 @Injectable()
 export class CatalogService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(CatalogService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly rabbitmq: RabbitMQService,
+  ) {}
 
   private buildWhere(query: ListWinesQueryDto): Prisma.WineWhereInput {
     const where: Prisma.WineWhereInput = {};
@@ -151,5 +161,119 @@ export class CatalogService {
     });
     const aggMap = await this.aggregateReviews(wines.map((w) => w.id));
     return wines.map((w) => this.toCard(w, aggMap.get(w.id)));
+  }
+
+  // ─── Wine CRUD (Admin) ───────────────────────────────────────────
+
+  async createWine(dto: CreateWineDto) {
+    const wine = await this.prisma.wine.create({ data: dto as any });
+    try {
+      await this.rabbitmq.publishAuditEvent({
+        entity: 'Wine',
+        action: 'CREATE',
+        userId: 'admin',
+        userEmail: 'admin@cavalocal.com',
+        timestamp: new Date().toISOString(),
+        data: { after: wine },
+      });
+    } catch (err) {
+      this.logger.warn('Failed to publish audit event for createWine', err);
+    }
+    return wine;
+  }
+
+  async updateWine(id: string, dto: UpdateWineDto) {
+    const existing = await this.prisma.wine.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Vino no encontrado');
+    const wine = await this.prisma.wine.update({ where: { id }, data: dto as any });
+    try {
+      await this.rabbitmq.publishAuditEvent({
+        entity: 'Wine',
+        action: 'UPDATE',
+        userId: 'admin',
+        userEmail: 'admin@cavalocal.com',
+        timestamp: new Date().toISOString(),
+        data: { before: existing, after: wine },
+      });
+    } catch (err) {
+      this.logger.warn('Failed to publish audit event for updateWine', err);
+    }
+    return wine;
+  }
+
+  async deleteWine(id: string) {
+    const existing = await this.prisma.wine.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Vino no encontrado');
+    await this.prisma.wine.delete({ where: { id } });
+    try {
+      await this.rabbitmq.publishAuditEvent({
+        entity: 'Wine',
+        action: 'DELETE',
+        userId: 'admin',
+        userEmail: 'admin@cavalocal.com',
+        timestamp: new Date().toISOString(),
+        data: { before: existing },
+      });
+    } catch (err) {
+      this.logger.warn('Failed to publish audit event for deleteWine', err);
+    }
+    return { deleted: true };
+  }
+
+  // ─── Establishment CRUD (Admin) ──────────────────────────────────
+
+  async createEstablishment(dto: CreateEstablishmentDto) {
+    const establishment = await this.prisma.establishment.create({ data: dto as any });
+    try {
+      await this.rabbitmq.publishAuditEvent({
+        entity: 'Establishment',
+        action: 'CREATE',
+        userId: 'admin',
+        userEmail: 'admin@cavalocal.com',
+        timestamp: new Date().toISOString(),
+        data: { after: establishment },
+      });
+    } catch (err) {
+      this.logger.warn('Failed to publish audit event for createEstablishment', err);
+    }
+    return establishment;
+  }
+
+  async updateEstablishment(id: string, dto: UpdateEstablishmentDto) {
+    const existing = await this.prisma.establishment.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Establecimiento no encontrado');
+    const establishment = await this.prisma.establishment.update({ where: { id }, data: dto as any });
+    try {
+      await this.rabbitmq.publishAuditEvent({
+        entity: 'Establishment',
+        action: 'UPDATE',
+        userId: 'admin',
+        userEmail: 'admin@cavalocal.com',
+        timestamp: new Date().toISOString(),
+        data: { before: existing, after: establishment },
+      });
+    } catch (err) {
+      this.logger.warn('Failed to publish audit event for updateEstablishment', err);
+    }
+    return establishment;
+  }
+
+  async deleteEstablishment(id: string) {
+    const existing = await this.prisma.establishment.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Establecimiento no encontrado');
+    await this.prisma.establishment.delete({ where: { id } });
+    try {
+      await this.rabbitmq.publishAuditEvent({
+        entity: 'Establishment',
+        action: 'DELETE',
+        userId: 'admin',
+        userEmail: 'admin@cavalocal.com',
+        timestamp: new Date().toISOString(),
+        data: { before: existing },
+      });
+    } catch (err) {
+      this.logger.warn('Failed to publish audit event for deleteEstablishment', err);
+    }
+    return { deleted: true };
   }
 }

@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaymentsService } from '../payments/payments.service';
 import { EmailService } from '../notifications/email.service';
+import { RabbitMQService } from '../rabbitmq/rabbitmq.service';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { PayReservationDto } from './dto/pay-reservation.dto';
 
@@ -16,6 +17,7 @@ export class ReservationsService {
     private readonly prisma: PrismaService,
     private readonly payments: PaymentsService,
     private readonly email: EmailService,
+    private readonly rabbitmq: RabbitMQService,
   ) {}
 
   private haversineKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
@@ -27,9 +29,9 @@ export class ReservationsService {
 
   deliveryFeeFor(orderType: string, store: { lat: number; lng: number }, deliveryLat?: number, deliveryLng?: number): number {
     if (orderType !== 'delivery') return 0;
-    const BASE_FEE = 0.80;  // cargo base del envío
-    const PER_KM = 0.35;    // costo por km
-    const MAX_KM = 50;      // tope de distancia (sanidad)
+    const BASE_FEE = 0.80;
+    const PER_KM = 0.35;
+    const MAX_KM = 50;
     const km = Math.min(MAX_KM, Math.max(0, this.haversineKm(store.lat, store.lng, deliveryLat ?? store.lat, deliveryLng ?? store.lng)));
     return round2(BASE_FEE + PER_KM * km);
   }
@@ -80,7 +82,7 @@ export class ReservationsService {
     const total = await this.prisma.reservation.count();
     const invoiceNumber = 'CL-' + String(total + 1).padStart(6, '0');
 
-    return this.prisma.reservation.create({
+    const reservation = await this.prisma.reservation.create({
       data: {
         invoiceNumber,
         userId,
@@ -105,6 +107,21 @@ export class ReservationsService {
         deliveryLng: dto.orderType === 'delivery' ? dto.deliveryLng : null,
       },
     });
+
+    try {
+      await this.rabbitmq.publishAuditEvent({
+        entity: 'Reservation',
+        action: 'CREATE',
+        userId,
+        userEmail: dto.customer.email,
+        timestamp: new Date().toISOString(),
+        data: { after: reservation },
+      });
+    } catch (err) {
+      this.logger.warn('Failed to publish audit event for createReservation', err);
+    }
+
+    return reservation;
   }
 
   async payReservation(userId: string, id: string, card: PayReservationDto) {
@@ -142,6 +159,23 @@ export class ReservationsService {
       where: { id },
       data: { status: 'confirmed', emailSent },
     });
+
+    try {
+      await this.rabbitmq.publishAuditEvent({
+        entity: 'Reservation',
+        action: 'UPDATE',
+        userId,
+        userEmail: reservation.customerEmail,
+        timestamp: new Date().toISOString(),
+        data: {
+          before: { status: reservation.status },
+          after: { status: 'confirmed', emailSent },
+        },
+      });
+    } catch (err) {
+      this.logger.warn('Failed to publish audit event for payReservation', err);
+    }
+
     return { reservation: updated, emailSent };
   }
 
@@ -150,7 +184,25 @@ export class ReservationsService {
     if (!reservation || reservation.userId !== userId) throw new NotFoundException('Reserva no encontrada.');
     if (reservation.status === 'cancelled') throw new BadRequestException('La reserva ya está cancelada.');
     if (reservation.status === 'expired') throw new BadRequestException('La reserva ya expiró.');
-    return this.prisma.reservation.update({ where: { id }, data: { status: 'cancelled' } });
+    const updated = await this.prisma.reservation.update({ where: { id }, data: { status: 'cancelled' } });
+
+    try {
+      await this.rabbitmq.publishAuditEvent({
+        entity: 'Reservation',
+        action: 'UPDATE',
+        userId,
+        userEmail: reservation.customerEmail,
+        timestamp: new Date().toISOString(),
+        data: {
+          before: { status: reservation.status },
+          after: { status: 'cancelled' },
+        },
+      });
+    } catch (err) {
+      this.logger.warn('Failed to publish audit event for cancelReservation', err);
+    }
+
+    return updated;
   }
 
   // Limpieza: las reservas sin pagar expiran a las 24 horas.

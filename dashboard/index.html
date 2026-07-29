@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CavaLocal Audit Dashboard — Monitoreo en tiempo real de eventos de auditoría">
+  <title>CavaLocal — Audit Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <h1 class="header-title">🍷 CavaLocal <span class="header-subtitle">Audit Dashboard</span></h1>
+      </div>
+      <div class="header-right">
+        <div class="connection-status" id="connectionStatus">
+          <span class="status-dot" id="statusDot"></span>
+          <span class="status-text" id="statusText">Conectando...</span>
+        </div>
+        <div class="event-counter">
+          <span id="eventCount">0</span> eventos
+        </div>
+      </div>
+    </header>
+
+    <!-- Filters -->
+    <section class="filters-section">
+      <div class="filters-card">
+        <div class="filter-group">
+          <label for="filterEntity">Entidad</label>
+          <select id="filterEntity">
+            <option value="">Todas</option>
+            <option value="User">User</option>
+            <option value="Wine">Wine</option>
+            <option value="Establishment">Establishment</option>
+            <option value="Reservation">Reservation</option>
+            <option value="Review">Review</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filterAction">Acción</label>
+          <select id="filterAction">
+            <option value="">Todas</option>
+            <option value="CREATE">CREATE</option>
+            <option value="UPDATE">UPDATE</option>
+            <option value="DELETE">DELETE</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filterUser">Usuario</label>
+          <input type="text" id="filterUser" placeholder="ID o email...">
+        </div>
+        <div class="filter-actions">
+          <button class="btn btn-primary" id="btnApplyFilters">Aplicar</button>
+          <button class="btn btn-secondary" id="btnClearFilters">Limpiar</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Events Table -->
+    <section class="table-section">
+      <div class="table-card">
+        <div class="table-wrapper">
+          <table id="eventsTable">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Entidad</th>
+                <th>Acción</th>
+                <th>Usuario</th>
+                <th>Resumen</th>
+              </tr>
+            </thead>
+            <tbody id="eventsBody">
+              <tr class="empty-row">
+                <td colspan="5">Esperando eventos de auditoría...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          <button class="btn btn-secondary" id="btnLoadMore" style="display:none;">Cargar más</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Detail Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 class="modal-title" id="modalTitle">Detalle del Evento</h2>
+          <button class="modal-close" id="modalClose">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-meta" id="modalMeta"></div>
+          <div class="modal-json">
+            <h3>Data (JSON)</h3>
+            <pre id="modalJson"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

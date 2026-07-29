@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: guamanmorales-config
+  namespace: guamanmorales
+data:
+  NODE_ENV: "production"
+  POSTGRES_USER: "postgres"
+  POSTGRES_DB: "cavalocal"
+  POSTGRES_HOST: "guamanmorales-postgres-service"
+  POSTGRES_PORT: "5432"
+  AUDIT_POSTGRES_HOST: "guamanmorales-audit-postgres-service"
+  AUDIT_POSTGRES_DB: "audit_db"
+  RABBITMQ_URL: "amqp://guest:guest@guamanmorales-rabbitmq-service:5672"
+  RABBITMQ_EXCHANGE: "audit.events"
+  RABBITMQ_QUEUE: "audit.queue"
+  BACKEND_PORT: "3001"
+  AUDIT_PORT: "3002"
+  CORS_ORIGINS: "*"
+  JWT_EXPIRES_IN: "1d"

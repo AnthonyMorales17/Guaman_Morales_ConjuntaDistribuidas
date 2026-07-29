@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guamanmorales-dashboard
+  namespace: guamanmorales
+  labels:
+    app: guamanmorales-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: guamanmorales-dashboard
+  template:
+    metadata:
+      labels:
+        app: guamanmorales-dashboard
+    spec:
+      containers:
+        - name: dashboard
+          image: guamanmorales-dashboard:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "25m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"

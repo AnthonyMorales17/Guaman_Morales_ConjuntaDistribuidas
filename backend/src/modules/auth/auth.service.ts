@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -10,6 +11,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { RabbitMQService } from '../rabbitmq/rabbitmq.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { GoogleVerifierService } from './google-verifier.service';
@@ -21,12 +23,15 @@ export interface AuthResult {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly googleVerifier: GoogleVerifierService,
     private readonly email: EmailService,
     private readonly config: ConfigService,
+    private readonly rabbitmq: RabbitMQService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResult> {
@@ -38,6 +43,20 @@ export class AuthService {
     const user = await this.prisma.user.create({
       data: { name: dto.name.trim(), email, phone: dto.phone, passwordHash },
     });
+
+    try {
+      await this.rabbitmq.publishAuditEvent({
+        entity: 'User',
+        action: 'CREATE',
+        userId: user.id,
+        userEmail: user.email,
+        timestamp: new Date().toISOString(),
+        data: { after: { id: user.id, name: user.name, email: user.email, role: user.role } },
+      });
+    } catch (err) {
+      this.logger.warn('Failed to publish audit event for register', err);
+    }
+
     return this.buildResult(user);
   }
 
@@ -57,14 +76,32 @@ export class AuthService {
     const email = profile.email.trim().toLowerCase();
 
     let user = await this.prisma.user.findUnique({ where: { email } });
+    let isNewUser = false;
     if (!user) {
       const passwordHash = await bcrypt.hash(randomUUID(), 10);
       user = await this.prisma.user.create({
         data: { name: profile.name, email, googleId: profile.sub, passwordHash },
       });
+      isNewUser = true;
     } else if (!user.googleId) {
       await this.prisma.user.update({ where: { id: user.id }, data: { googleId: profile.sub } });
     }
+
+    if (isNewUser) {
+      try {
+        await this.rabbitmq.publishAuditEvent({
+          entity: 'User',
+          action: 'CREATE',
+          userId: user.id,
+          userEmail: user.email,
+          timestamp: new Date().toISOString(),
+          data: { after: { id: user.id, name: user.name, email: user.email, role: user.role } },
+        });
+      } catch (err) {
+        this.logger.warn('Failed to publish audit event for googleLogin', err);
+      }
+    }
+
     return this.buildResult(user);
   }
 
@@ -127,3 +164,4 @@ export class AuthService {
     };
   }
 }
+

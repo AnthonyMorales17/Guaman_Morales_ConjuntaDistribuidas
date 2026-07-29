@@ -1,5 +1,9 @@
 # EVALUACION CONJUNTA
 
+- Dockerizar para ambiente de Kubernetes
+
+- Dockerizar front y back
+
 ## 1. Contexto
 
 CavaLocal es un marketplace intermediario de vinos para Caracas. Actualmente cuenta con un **backend en NestJS** (API REST), un **frontend web** en vanilla JS y un **landing de marketing**. Dado el crecimiento del proyecto, se requiere implementar una trazabilidad completa mediante un **microservicio de auditoría** desacoplado, y un **dashboard en tiempo real** que visualice estos eventos mediante **Server-Sent Events (SSE)**.
@@ -103,17 +107,17 @@ Diseñar, implementar, desplegar y orquestar en **Kubernetes** un microservicio 
 
 La evaluación se realizará aplicando el comando `kubectl apply -f .` desde la carpeta `/k8s` del repositorio entregado. **Si el comando falla (no se aplican correctamente todos los recursos), la calificación será de 0/20 automáticamente.** El proyecto debe ser **replicable** en cualquier computador con Kubernetes instalado (Minikube o Kind) siguiendo las instrucciones del README.
 
-| CRITERIO | PUNTUACIÓN |
-|---|---:|
-| RabbitMQ + Microservicio Audit | 5 |
-| Implementación SSE | 2,5 |
-| Dashboard | 2,5 |
-| Kubernetes | |
-| BD | 2,5 |
-| Backend | 2,5 |
-| Frontend | 2,5 |
-| Ingress (Dominio local) | 2,5 |
-| **TOTAL** | **20** |
+| CRITERIO                       | PUNTUACIÓN |
+| ------------------------------ | ---------: |
+| RabbitMQ + Microservicio Audit |          5 |
+| Implementación SSE             |        2,5 |
+| Dashboard                      |        2,5 |
+| Kubernetes                     |            |
+| BD                             |        2,5 |
+| Backend                        |        2,5 |
+| Frontend                       |        2,5 |
+| Ingress (Dominio local)        |        2,5 |
+| **TOTAL**                      |     **20** |
 
 ## Evaluación Práctica
 

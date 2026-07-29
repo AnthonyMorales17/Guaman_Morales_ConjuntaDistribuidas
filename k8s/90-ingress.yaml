@@ -1,0 +1,49 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: guamanmorales-ingress
+  namespace: guamanmorales
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: conjunta3p.espe.edu.ec
+      http:
+        paths:
+          # Audit API (must be before /api generic)
+          - path: /api/audit(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: guamanmorales-audit-service
+                port:
+                  number: 3002
+
+          # Dashboard
+          - path: /dashboard(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: guamanmorales-dashboard-service
+                port:
+                  number: 80
+
+          # Backend API (catch-all /api)
+          - path: /api(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: guamanmorales-backend-service
+                port:
+                  number: 3001
+
+          # Frontend (catch-all /)
+          - path: /(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: guamanmorales-frontend-service
+                port:
+                  number: 80
